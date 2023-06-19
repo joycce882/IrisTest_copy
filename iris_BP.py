@@ -49,8 +49,7 @@ class NN:
 
         # 激活神经网络的所有节点（向量）
         self.ai = [1.0] * self.ni  # 输入层神经元的激活项其实就是输入的特征数，这样设计是为了向量化前向传播过程。
-        self.ah = [
-                      1.0] * self.nh  # [1.0]是一个列表，列表支持乘法运算，[1.0]*5 的结果是[1.0 1.0 1.0 1.0 1.0 1.0]。偏置节点必定为1，也就是列表中第一个数为1，其他数依次记录隐藏层节点的激活项
+        self.ah = [1.0] * self.nh  # [1.0]是一个列表，列表支持乘法运算，[1.0]*5 的结果是[1.0 1.0 1.0 1.0 1.0 1.0]。偏置节点必定为1，也就是列表中第一个数为1，其他数依次记录隐藏层节点的激活项
         self.ao = [1.0] * self.no  # 输出层输出的结果为预测该样本属于某一类的概率，概率最大者，则预测为该类
 
         # 建立权重（矩阵）
@@ -60,6 +59,9 @@ class NN:
         for i in range(self.ni):  # 上层循环控制行
             for j in range(self.nh):  # 下层循环控制列
                 self.wi[i][j] = rand(-0.2, 0.2)  # 调用全局函数rand(),生成区间[-0.2, 0.2)内的随机数
+        #  下面的函数是看wi得视图的
+        # self.wi = pd.DataFrame(self.wi)
+        # self.wi = (self.wi).values
         for j in range(self.nh):
             for k in range(self.no):
                 self.wo[j][k] = rand(-2, 2)  # 生成区间[-2, 2)内的随机数
@@ -95,13 +97,14 @@ class NN:
     def backPropagate(self, targets, lr):  # targets为某样本实际种类分类，lr为梯度下降算法的学习率
 
         # 计算输出层的误差
-        output_deltas = [
-                            0.0] * self.no  # 记录方向传播的误差；输出层误差容易求，把样本的实际值减去我们当前神经网络预测的值，δ^((3))=〖y-a〗^((3) );但是输出层的误差是由前面层一层一层累加的结果，我们将误差方向传播的过程叫方向传播算法。由算法知：δ^((2))=〖(Θ^((2)))〗^T δ^((3)).*g^' (z^((2)))
+        output_deltas = [0.0] * self.no  # 记录方向传播的误差；输出层误差容易求，把样本的实际值减去我们当前神经网络预测的值，δ^((3))=〖y-a〗^((3) );但是输出层的误差是由前面层一层一层累加的结果，我们将误差方向传播的过程叫方向传播算法。由算法知：δ^((2))=〖(Θ^((2)))〗^T δ^((3)).*g^' (z^((2)))
         for k in range(self.no):
             error = targets[k] - self.ao[k]  # δ^((3))=〖y-a〗^((3) ),得到输出层的误差
             output_deltas[k] = dsigmoid(
                 self.ao[k]) * error  # dsigmoid()函数的功能是求公式中 g^' (z^((2))) 项，而output_deltas记录的是δ^((3)).*g^' (z^((2)))的值
-
+# outout_delats[]的意思是gi,也就是一个节点的输出对每一个隐层的输入求偏导
+# 如果需要更新隐层节点的话，那么每一个输出节点所对应的每一个output_delats[]都必须参与到
+# 这也就是为什么下面这么计算的原因，下面的self.wo[][]是偏执
         # 计算隐藏层的误差
         hidden_deltas = [0.0] * self.nh  # 记录的是δ^((2)).*g^' (z^((1)))的值
         for j in range(self.nh):
@@ -109,7 +112,7 @@ class NN:
             for k in range(self.no):
                 error = error + output_deltas[k] * self.wo[j][k]  # 求δ^((2))，隐藏层的误差
             hidden_deltas[j] = dsigmoid(self.ah[j]) * error
-
+#  上面这段计算的是eh
         # 更新输出层权重
         for j in range(
                 self.nh):  # 反向传播算法，求出每个节点的误差后，反向更新权重；由算法知Δ(_ij ^((L)))=Δ(_ij ^((L)))+a(_j  ^((L)))δ(_i      ^((L+1)))    ,而∂/(∂Θ_ij^((L) ) ) J(Θ)=Δ_ij^((L))   (λ=0) λ为正则化系数。代入梯度下降算法中：Θ_ij^((L))=Θ_ij^((L))+α  ∂/(∂Θ_ij^((L) ) ) J(Θ)即可更新权重
@@ -122,6 +125,8 @@ class NN:
             for j in range(self.nh):
                 change = hidden_deltas[j] * self.ai[i]
                 self.wi[i][j] = self.wi[i][j] + lr * change
+
+# 上面这段计算的是vih,也就是输入层到隐层的权重
 
         # 计算误差
         error = 0.0  # 每调用一次先归零，不停地进行迭代
@@ -173,13 +178,14 @@ def iris():
     # 读取数据
     raw = pd.read_csv('iris.csv')  # pd是pandas模块的重命名，pd.read_cs()函数读取本地文件iris.csv里数据。raw为DataFrame类型
     raw_data = raw.values  # 将DataFrame类型转化为array类型
-    raw_feature = raw_data[0:, 0:4]  # 用冒号表达式取数，取第1-5列的数，也就是样本的特征值
+    raw_data = raw_data[:,1:]
+    raw_feature = raw_data[:, :-1]  # 用冒号表达式取数，取第1-5列的数，也就是样本的特征值
     for i in range(len(raw_feature)):  # 将数据保存在列表中，方便后面操作
         ele = []
         ele.append(list(raw_feature[i]))  # ele列表第一个元素保存该样本特征值
-        if raw_data[i][4] == 'Iris-setosa':  # 用向量表示种类类型，Iris-setosa用[1,0,0]表示
+        if raw_data[i][4] == 'setosa':  # 用向量表示种类类型，Iris-setosa用[1,0,0]表示
             ele.append([1, 0, 0])  # ele列表第二个元素该样本的种类
-        elif raw_data[i][4] == 'Iris-versicolor':  # Iris-versicolor用[0,1,0]表示
+        elif raw_data[i][4] == 'versicolor':  # Iris-versicolor用[0,1,0]表示
             ele.append([0, 1, 0])
         else:
             ele.append([0, 0, 1])  # Iris-virginica用[0,0,1]表示
