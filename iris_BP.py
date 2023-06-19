@@ -171,8 +171,6 @@ class NN:
                 print('error: %-.9f' % error)
 
         return errors
-
-
 def iris():
     data = []  # 建立一个data列表，用来存放样本数据
     # 读取数据
