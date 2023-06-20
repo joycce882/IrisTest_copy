@@ -60,8 +60,8 @@ class NN:
             for j in range(self.nh):  # 下层循环控制列
                 self.wi[i][j] = rand(-0.2, 0.2)  # 调用全局函数rand(),生成区间[-0.2, 0.2)内的随机数
         #  下面的函数是看wi得视图的
-        # self.wi = pd.DataFrame(self.wi)
-        # self.wi = (self.wi).values
+        self.wi = pd.DataFrame(self.wi)
+        self.wi = (self.wi).values
         for j in range(self.nh):
             for k in range(self.no):
                 self.wo[j][k] = rand(-2, 2)  # 生成区间[-2, 2)内的随机数
